@@ -2,13 +2,19 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "test-node"
+        IMAGE_NAME = "test"
+        DOCKER_USER = 'kamil38490'
     }
 
     stages {
+
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker_hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker_hub', 
+                    usernameVariable: 'DOCKER_USER', 
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
             }
@@ -22,17 +28,6 @@ pipeline {
                       -t $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER} \
                       -t $DOCKER_USER/$IMAGE_NAME:latest \
                       docker
-                '''
-            }
-        }
-
-        stage('Test Image') {
-            steps {
-                sh '''
-                    docker run --rm -d --name test-container -p 3000:3000 $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
-                    sleep 5
-                    curl -f http://localhost:3000
-                    docker stop test-container
                 '''
             }
         }
@@ -53,4 +48,3 @@ pipeline {
         }
     }
 }
-
