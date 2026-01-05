@@ -1,5 +1,5 @@
 FROM alpine:3.19
 
-RUN echo "Hello from Jenkins CI/CD" > /message.txt
+RUN echo "Kamil" > /message.txt
 
 CMD ["cat", "/message.txt"]
