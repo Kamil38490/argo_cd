@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = "test-node"
+        DOCKER_USER = 'kamil38490'
     }
 
     stages {
