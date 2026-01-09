@@ -28,30 +28,27 @@ pipeline {
         }
 
         stage('Test Image') {
-    steps {
-        sh '''
-            docker rm -f test-container || true
+            steps {
+                sh '''
+                    docker rm -f test-container || true
 
-            docker run -d --name test-container \
-              $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
+                    docker run -d --name test-container \
+                      $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
 
-            echo "Czekam aż aplikacja wstanie..."
+                    echo "Czekam aż aplikacja wstanie..."
 
-            for i in $(seq 1 10); do
-              if docker exec test-container curl -f http://localhost:5001; then
-                echo "Aplikacja działa"
-                break
-              fi
-              sleep 2
-            done
+                    for i in $(seq 1 10); do
+                      if docker exec test-container curl -f http://localhost:5001; then
+                        echo "Aplikacja działa"
+                        break
+                      fi
+                      sleep 2
+                    done
 
-            docker stop test-container
-        '''
-    }
-}
-
-
-
+                    docker stop test-container
+                '''
+            }
+        }
 
         stage('Push Image') {
             steps {
@@ -61,19 +58,15 @@ pipeline {
                 '''
             }
         }
-    }
-    
-     stage('Update Helm Chart') {
+
+        stage('Update Helm Chart') {
             steps {
                 sh '''
-                    # Pobranie Helm Charta z GitHub
                     git clone https://github.com/kamil38490/aplikacja1-helm.git helm-temp
                     cd helm-temp/aplikacja1
 
-                    # Nadpisanie tagu w values.yaml na aktualny BUILD_NUMBER
                     sed -i "s/tag:.*/tag: ${BUILD_NUMBER}/" values.yaml
 
-                    # Commit i push zmian
                     git config user.email "jenkins@example.com"
                     git config user.name "Jenkins CI"
                     git add values.yaml
@@ -82,13 +75,12 @@ pipeline {
                 '''
             }
         }
-    }
-
+    } // koniec stages
 
     post {
         always {
             sh 'docker logout'
         }
     }
-}
+} // koniec pipeline
 
