@@ -32,13 +32,13 @@ pipeline {
         sh '''
             docker rm -f test-container || true
 
-            docker run -d --name test-container -p 5001:5001 \
+            docker run -d --name test-container \
               $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
 
             echo "Czekam aż aplikacja wstanie..."
 
             for i in $(seq 1 10); do
-              if curl -f http://localhost:5001; then
+              if docker exec test-container curl -f http://localhost:5001; then
                 echo "Aplikacja działa"
                 break
               fi
