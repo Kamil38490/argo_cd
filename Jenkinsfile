@@ -28,26 +28,28 @@ pipeline {
         }
 
         stage('Test Image') {
-            steps {
-                sh '''
-                    # sprzątanie po poprzednich buildach
-                    docker rm -f test-container || true
+    steps {
+        sh '''
+            docker rm -f test-container || true
 
-                    # start kontenera
-                    docker run -d --name test-container -p 5001:5001 \
-                      $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
+            docker run -d --name test-container -p 5001:5001 \
+              $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
 
-                    # czekamy aż aplikacja wstanie
-                    for i in {1..10}; do
-                      curl -f http://localhost:5001 && break
-                      sleep 2
-                    done
+            echo "Czekam aż aplikacja wstanie..."
 
-                    # zatrzymanie kontenera
-                    docker stop test-container
-                '''
-            }
-        }
+            for i in {1..10}; do
+              if curl -f http://localhost:5001; then
+                echo "Aplikacja działa"
+                break
+              fi
+              sleep 2
+            done
+
+            docker stop test-container
+        '''
+    }
+}
+
 
 
         stage('Push Image') {
