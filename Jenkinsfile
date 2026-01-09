@@ -37,7 +37,7 @@ pipeline {
 
             echo "Czekam aż aplikacja wstanie..."
 
-            for i in {1..10}; do
+            for i in $(seq 1 10); do
               if curl -f http://localhost:5001; then
                 echo "Aplikacja działa"
                 break
@@ -49,6 +49,7 @@ pipeline {
         '''
     }
 }
+
 
 
 
