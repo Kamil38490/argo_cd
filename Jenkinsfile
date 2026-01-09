@@ -30,9 +30,9 @@ pipeline {
         stage('Test Image') {
             steps {
                 sh '''
-                    docker run --rm -d --name test-container -p 3000:3000 $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
+                    docker run --rm -d --name test-container -p 5000:5000 $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
                     sleep 5
-                    curl -f http://localhost:3000
+                    curl -f http://localhost:5000
                     docker stop test-container
                 '''
             }
