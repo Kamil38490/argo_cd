@@ -11,6 +11,6 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 EXPOSE 5001
-
+#r
 CMD ["python", "app.py"]
 
