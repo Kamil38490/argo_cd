@@ -60,23 +60,29 @@ pipeline {
         }
 
      stage('Update Helm Chart') {
-            steps {
-                sh '''
-                git clone https://github.com/Kamil38490/argo_cd.git argo-temp
-                cd argo-temp/aplikacja1
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'github_token',
+            usernameVariable: 'GIT_USER',
+            passwordVariable: 'GIT_TOKEN'
+        )]) {
+            sh '''
+            git clone https://$GIT_USER:$GIT_TOKEN@github.com/Kamil38490/argo_cd.git argo-temp
+            cd argo-temp/aplikacja1
 
-                sed -i "s/tag:.*/tag: ${BUILD_NUMBER}/" values.yaml
+            sed -i "s/tag:.*/tag: ${BUILD_NUMBER}/" values.yaml
 
-                git config user.email "jenkins@example.com"
-                git config user.name "Jenkins CI"
+            git config user.email "jenkins@example.com"
+            git config user.name "Jenkins CI"
 
-                git add values.yaml
-                git commit -m "Update image tag to ${BUILD_NUMBER}" || true
-                git push origin main
-                '''
-            }
+            git add values.yaml
+            git commit -m "Update image tag to ${BUILD_NUMBER}" || true
+            git push origin main
+            '''
         }
     }
+}
+
 
     post {
         always {
