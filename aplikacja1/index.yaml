@@ -3,12 +3,23 @@ entries:
   aplikacja1:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2026-01-28T17:24:59.66746528+01:00"
+    created: "2026-01-28T17:34:56.590592909+01:00"
+    description: A Helm chart for Kubernetes
+    digest: 60dd661a397c7e810905c1e5da693bcf51db3fa2247fa4ced41fcf3d37601135
+    name: aplikacja1
+    type: application
+    urls:
+    - https://kamil38490.github.io/argo_cd/aplikacja1/aplikacja1-0.1.0.tgz
+    version: 0.1.0
+  aplikacja2:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2026-01-28T17:34:56.591033654+01:00"
     description: A Helm chart for Kubernetes
     digest: 3ec203ae6164758579f93b5f8e5dd45e54e3b6f38e936813c5f6e8ce4cc1e2eb
     name: aplikacja2
     type: application
     urls:
-    - https://kamil38490.github.io/argo_cd/aplikacja2-0.1.0.tgz
+    - https://kamil38490.github.io/argo_cd/aplikacja1/aplikacja2-0.1.0.tgz
     version: 0.1.0
-generated: "2026-01-28T17:24:59.666622539+01:00"
+generated: "2026-01-28T17:34:56.589912088+01:00"
