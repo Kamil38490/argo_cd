@@ -16,6 +16,9 @@ pipeline {
         }
 
         stage('Build Image') {
+            when {
+                changeset "**/docker/**"   // odpala tylko gdy zmiany w Dockerfile lub folderze docker/
+            }
             steps {
                 sh '''
                     docker build \
@@ -28,15 +31,15 @@ pipeline {
         }
 
         stage('Test Image') {
+            when {
+                changeset "**/docker/**"
+            }
             steps {
                 sh '''
                     docker rm -f test-container || true
-
                     docker run -d --name test-container \
                       $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
-
                     echo "Czekam aż aplikacja wstanie..."
-
                     for i in $(seq 1 10); do
                       if docker exec test-container curl -f http://localhost:5001; then
                         echo "Aplikacja działa"
@@ -44,13 +47,15 @@ pipeline {
                       fi
                       sleep 2
                     done
-
                     docker stop test-container
                 '''
             }
         }
 
         stage('Push Image') {
+            when {
+                changeset "**/docker/**"
+            }
             steps {
                 sh '''
                     docker push $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
@@ -59,36 +64,33 @@ pipeline {
             }
         }
 
-     stage('Update Helm Chart') {
-    steps {
-        withCredentials([usernamePassword(
-            credentialsId: 'github_token',
-            usernameVariable: 'GIT_USER',
-            passwordVariable: 'GIT_TOKEN'
-        )]) {
-            sh '''
-            rm -rf argo-temp
-
-            git clone https://$GIT_USER:$GIT_TOKEN@github.com/Kamil38490/argo_cd.git argo-temp
-            cd argo-temp/aplikacja1
-
-            sed -i "s/tag:.*/tag: ${BUILD_NUMBER}/" values.yaml
-
-            git config user.email "jenkins@example.com"
-            git config user.name "Jenkins CI"
-
-            git add values.yaml
-            git commit -m "Update image tag to ${BUILD_NUMBER} [skip ci]" || true
-            git push origin main
-            '''
+        stage('Update Helm Chart') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'github_token',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_TOKEN'
+                )]) {
+                    sh '''
+                        rm -rf argo-temp
+                        git clone https://$GIT_USER:$GIT_TOKEN@github.com/Kamil38490/argo_cd.git argo-temp
+                        cd argo-temp/aplikacja1
+                        sed -i "s/tag:.*/tag: ${BUILD_NUMBER}/" values.yaml
+                        git config user.email "jenkins@example.com"
+                        git config user.name "Jenkins CI"
+                        git add values.yaml
+                        git commit -m "Update image tag to ${BUILD_NUMBER}" || true
+                        git push origin main
+                    '''
+                }
+            }
         }
     }
-}
-}
+
     post {
         always {
             sh 'docker logout'
         }
     }
-} // koniec pipeline
+}
 
