@@ -67,6 +67,8 @@ pipeline {
             passwordVariable: 'GIT_TOKEN'
         )]) {
             sh '''
+            rm -rf argo-temp
+
             git clone https://$GIT_USER:$GIT_TOKEN@github.com/Kamil38490/argo_cd.git argo-temp
             cd argo-temp/aplikacja1
 
@@ -82,7 +84,6 @@ pipeline {
         }
     }
 }
-
 }
     post {
         always {
