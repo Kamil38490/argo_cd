@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: kamil38490/test-node
-  tag: 43
+  tag: 115
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
