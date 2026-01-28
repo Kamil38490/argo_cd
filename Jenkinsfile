@@ -78,7 +78,7 @@ pipeline {
             git config user.name "Jenkins CI"
 
             git add values.yaml
-            git commit -m "Update image tag to ${BUILD_NUMBER}" || true
+            git commit -m "Update image tag to ${BUILD_NUMBER} [skip ci]" || true
             git push origin main
             '''
         }
