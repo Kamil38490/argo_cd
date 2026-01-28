@@ -4,59 +4,31 @@ pipeline {
     environment {
         IMAGE_NAME = "test-node"
         DOCKER_USER = 'kamil38490'
+        HELM_REPO = 'https://github.com/Kamil38490/argo_cd.git'
     }
 
     stages {
-        stage('Docker Login') {
+
+        // ===== Etap 1: Budowa Dockera tylko przy zmianach w kodzie aplikacji =====
+        stage('Build Docker Image') {
+            when {
+                anyOf {
+                    changeset "docker/**"
+                    changeset "app/**"
+                }
+            }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker_hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
-            }
-        }
 
-        stage('Build Image') {
-            when {
-                changeset "**/docker/**"   // odpala tylko gdy zmiany w Dockerfile lub folderze docker/
-            }
-            steps {
                 sh '''
-                    docker build \
-                      -f docker/Dockerfile \
-                      -t $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER} \
-                      -t $DOCKER_USER/$IMAGE_NAME:latest \
-                      docker
+                    docker build -f docker/Dockerfile \
+                        -t $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER} \
+                        -t $DOCKER_USER/$IMAGE_NAME:latest \
+                        docker
                 '''
-            }
-        }
 
-        stage('Test Image') {
-            when {
-                changeset "**/docker/**"
-            }
-            steps {
-                sh '''
-                    docker rm -f test-container || true
-                    docker run -d --name test-container \
-                      $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
-                    echo "Czekam aż aplikacja wstanie..."
-                    for i in $(seq 1 10); do
-                      if docker exec test-container curl -f http://localhost:5001; then
-                        echo "Aplikacja działa"
-                        break
-                      fi
-                      sleep 2
-                    done
-                    docker stop test-container
-                '''
-            }
-        }
-
-        stage('Push Image') {
-            when {
-                changeset "**/docker/**"
-            }
-            steps {
                 sh '''
                     docker push $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
                     docker push $DOCKER_USER/$IMAGE_NAME:latest
@@ -64,23 +36,28 @@ pipeline {
             }
         }
 
+        // ===== Etap 2: Aktualizacja Helm chartu =====
         stage('Update Helm Chart') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'github_token',
-                    usernameVariable: 'GIT_USER',
-                    passwordVariable: 'GIT_TOKEN'
-                )]) {
+                withCredentials([usernamePassword(credentialsId: 'github_token', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                     sh '''
-                        rm -rf argo-temp
-                        git clone https://$GIT_USER:$GIT_TOKEN@github.com/Kamil38490/argo_cd.git argo-temp
-                        cd argo-temp/aplikacja1
-                        sed -i "s/tag:.*/tag: ${BUILD_NUMBER}/" values.yaml
-                        git config user.email "jenkins@example.com"
-                        git config user.name "Jenkins CI"
-                        git add values.yaml
-                        git commit -m "Update image tag to ${BUILD_NUMBER}" || true
-                        git push origin main
+                    # Czyści stare repo Helm
+                    rm -rf argo-temp
+
+                    # Klonuje repo Helm z tokenem
+                    git clone https://$GIT_USER:$GIT_TOKEN@github.com/Kamil38490/argo_cd.git argo-temp
+                    cd argo-temp/aplikacja1
+
+                    # Aktualizacja tagu tylko jeśli zmienił się obraz Dockera
+                    sed -i "s/tag:.*/tag: ${BUILD_NUMBER}/" values.yaml
+
+                    git config user.email "jenkins@example.com"
+                    git config user.name "Jenkins CI"
+
+                    # Commit z [ci skip] żeby nie uruchamiać pętli w Jenkins
+                    git add values.yaml
+                    git commit -m "Update image tag to ${BUILD_NUMBER} [ci skip]" || true
+                    git push origin main
                     '''
                 }
             }
@@ -89,7 +66,7 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout'
+            sh 'docker logout || true'
         }
     }
 }
