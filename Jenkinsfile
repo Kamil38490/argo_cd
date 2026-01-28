@@ -54,7 +54,7 @@ pipeline {
             steps {
                 sh '''
                     docker push $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
-                    docker push $DOCKER_USER/$IMAGE_NAME:latest
+                    
                 '''
             }
         }
