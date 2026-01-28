@@ -7,9 +7,14 @@ pipeline {
     }
 
     stages {
+
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker_hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker_hub', 
+                    usernameVariable: 'DOCKER_USER', 
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
             }
@@ -20,24 +25,28 @@ pipeline {
                 changeset "**/app/**, **/docker/**"
             }
             steps {
-                sh """
-                    docker build -f docker/Dockerfile \
-                        -t $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER} \
-                        -t $DOCKER_USER/$IMAGE_NAME:latest docker
-                """
+                script {
+                    sh """
+                        docker build -f docker/Dockerfile \
+                            -t $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER} \
+                            -t $DOCKER_USER/$IMAGE_NAME:latest docker
+                    """
+                    // oznaczenie, że obraz został zbudowany
+                    env.DOCKER_BUILT = "true"
+                }
             }
         }
 
         stage('Test Docker Image') {
             when {
-                changeset "**/app/**, **/docker/**"
+                expression { env.DOCKER_BUILT == "true" }
             }
             steps {
-                sh """
+                sh '''
                     docker rm -f test-container || true
                     docker run -d --name test-container $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
                     echo "Czekam aż aplikacja wstanie..."
-                    for i in \$(seq 1 10); do
+                    for i in $(seq 1 10); do
                         if docker exec test-container curl -f http://localhost:5001; then
                             echo "Aplikacja działa"
                             break
@@ -45,52 +54,50 @@ pipeline {
                         sleep 2
                     done
                     docker stop test-container
-                """
+                '''
             }
         }
 
         stage('Push Docker Image') {
             when {
-                changeset "**/app/**, **/docker/**"
+                expression { env.DOCKER_BUILT == "true" }
             }
             steps {
-                sh """
+                sh '''
                     docker push $DOCKER_USER/$IMAGE_NAME:${BUILD_NUMBER}
                     docker push $DOCKER_USER/$IMAGE_NAME:latest
-                """
+                '''
             }
         }
 
         stage('Update Helm Chart') {
+            when {
+                expression { env.DOCKER_BUILT == "true" }
+            }
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'github_token',
                     usernameVariable: 'GIT_USER',
                     passwordVariable: 'GIT_TOKEN'
                 )]) {
-                    sh """
+                    sh '''
                         rm -rf argo-temp
-                        git clone https://\$GIT_USER:\$GIT_TOKEN@github.com/Kamil38490/argo_cd.git argo-temp
-
+                        git clone https://$GIT_USER:$GIT_TOKEN@github.com/Kamil38490/argo_cd.git argo-temp
                         cd argo-temp/aplikacja1
 
-                        # pobieramy aktualny tag z values.yaml
-                        CURRENT_TAG=\$(grep 'tag:' values.yaml | awk '{print \$2}')
+                        # aktualizacja tagu w values.yaml
+                        sed -i "s/tag:.*/tag: ${BUILD_NUMBER}/" values.yaml
 
-                        if [ "\$CURRENT_TAG" != "${BUILD_NUMBER}" ]; then
-                            sed -i "s/tag:.*/tag: ${BUILD_NUMBER}/" values.yaml
-                            git config user.email "jenkins@example.com"
-                            git config user.name "Jenkins CI"
-                            git add values.yaml
-                            git commit -m "Update image tag to ${BUILD_NUMBER} [ci skip]" || true
-                            git push origin main
-                        else
-                            echo "Obraz nie zmienił się, Helm nie aktualizowany"
-                        fi
-                    """
+                        git config user.email "jenkins@example.com"
+                        git config user.name "Jenkins CI"
+                        git add values.yaml
+                        git commit -m "Update image tag to ${BUILD_NUMBER} [ci skip]" || true
+                        git push origin main
+                    '''
                 }
             }
         }
+
     }
 
     post {
